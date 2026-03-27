@@ -1,4 +1,3 @@
-
 (() => {
   const configNotice = document.getElementById('configNotice');
   const statusBox = document.getElementById('statusBox');
@@ -13,11 +12,6 @@
   const clearPairsBtn = document.getElementById('clearPairsBtn');
   const pairList = document.getElementById('pairList');
 
-  const teamSearchInput = document.getElementById('teamSearchInput');
-  const teamSuggest = document.getElementById('teamSuggest');
-  const pickedBox = document.getElementById('pickedBox');
-  const addTeamABtn = document.getElementById('addTeamABtn');
-  const addTeamBBtn = document.getElementById('addTeamBBtn');
   const size5Btn = document.getElementById('size5Btn');
   const size6Btn = document.getElementById('size6Btn');
   const resetTeamsBtn = document.getElementById('resetTeamsBtn');
@@ -31,9 +25,8 @@
     streamers: [],
     rivals: loadLocal('rivals', []),
     teams: loadLocal('teams', { size: 5, a: [], b: [], autoLinks: {} }),
-    pickedStreamerId: null,
     picks: { a: null, b: null },
-    suggest: { rivalA: [], rivalB: [], team: [] }
+    pendingScrollPairKey: null
   };
 
   function ensureTeamShape() {
@@ -65,23 +58,8 @@
     return pair[0] === id ? pair[1] : pair[0];
   }
 
-  function setPickedBox() {
-    const item = getStreamer(state.pickedStreamerId);
-    if (!item) {
-      pickedBox.className = 'notice';
-      pickedBox.textContent = '선택된 스트리머가 없습니다.';
-      return;
-    }
-    const rivalId = rivalFor(item.id);
-    const rival = rivalId ? getStreamer(rivalId) : null;
-    pickedBox.className = 'notice';
-    pickedBox.innerHTML = `
-      <strong>${escapeHtml(item.name)}</strong>
-      <div class="small" style="margin-top:8px;">
-        탱커 ${escapeHtml(item.tank_tier)} · 딜러 ${escapeHtml(item.dps_tier)} · 힐러 ${escapeHtml(item.support_tier)}
-      </div>
-      <div class="small muted" style="margin-top:6px;">맞상대: ${rival ? escapeHtml(rival.name) : '미지정'}</div>
-    `;
+  function pairKey(a, b) {
+    return `${a}__${b}`;
   }
 
   function renderSuggest(box, items, onPick) {
@@ -113,12 +91,29 @@
     }
   }
 
-  function selectTeamSearch(id) {
-    state.pickedStreamerId = id;
-    const streamer = getStreamer(id);
-    teamSearchInput.value = streamer?.name || '';
-    renderSuggest(teamSuggest, [], () => {});
-    setPickedBox();
+  function canAdd(team) {
+    return state.teams[team].length < state.teams.size;
+  }
+
+  function teamOf(id) {
+    if (state.teams.a.includes(id)) return 'a';
+    if (state.teams.b.includes(id)) return 'b';
+    return null;
+  }
+
+  function pairStatus(a, b) {
+    const leftTeam = teamOf(a);
+    const rightTeam = teamOf(b);
+    if (leftTeam === 'a' && rightTeam === 'b') {
+      return { mode: 'left-a', text: '배치됨 · 왼쪽 A팀 / 오른쪽 B팀', className: 'left-a' };
+    }
+    if (leftTeam === 'b' && rightTeam === 'a') {
+      return { mode: 'right-a', text: '배치됨 · 오른쪽 A팀 / 왼쪽 B팀', className: 'right-a' };
+    }
+    if (leftTeam || rightTeam) {
+      return { mode: 'partial', text: '부분 배치됨', className: 'partial' };
+    }
+    return { mode: 'idle', text: '미배치', className: 'idle' };
   }
 
   function renderPairs() {
@@ -127,18 +122,59 @@
       pairList.innerHTML = '<div class="muted small">저장된 맞상대가 없습니다.</div>';
       return;
     }
+
     pairList.innerHTML = state.rivals.map(([a, b], idx) => {
-      const sa = getStreamer(a);
-      const sb = getStreamer(b);
+      const left = getStreamer(a);
+      const right = getStreamer(b);
+      const status = pairStatus(a, b);
+      const canAssign = status.mode === 'idle' && canAdd('a') && canAdd('b');
+      const key = pairKey(a, b);
+
       return `
-        <div class="list-item">
-          <div><strong>${escapeHtml(sa?.name || '삭제된 항목')}</strong> ↔ <strong>${escapeHtml(sb?.name || '삭제된 항목')}</strong></div>
-          <div class="controls" style="margin-top:10px;">
+        <div class="pair-card ${status.className}" data-pair-key="${key}">
+          <div class="pair-card-head">
+            <div>
+              <strong>${escapeHtml(left?.name || '삭제된 항목')}</strong>
+              <span class="small muted"> ↔ </span>
+              <strong>${escapeHtml(right?.name || '삭제된 항목')}</strong>
+            </div>
+            <span class="badge pair-status ${status.className}">${escapeHtml(status.text)}</span>
+          </div>
+
+          <div class="pair-members">
+            <div class="pair-member left">
+              <div class="small muted">왼쪽</div>
+              <div class="pair-name">${escapeHtml(left?.name || '삭제된 항목')}</div>
+              <div class="chipline" style="margin-top:8px;">
+                ${tierBadge(left?.tank_tier || '-')}
+                ${tierBadge(left?.dps_tier || '-')}
+                ${tierBadge(left?.support_tier || '-')}
+              </div>
+            </div>
+            <div class="pair-member right">
+              <div class="small muted">오른쪽</div>
+              <div class="pair-name">${escapeHtml(right?.name || '삭제된 항목')}</div>
+              <div class="chipline" style="margin-top:8px;">
+                ${tierBadge(right?.tank_tier || '-')}
+                ${tierBadge(right?.dps_tier || '-')}
+                ${tierBadge(right?.support_tier || '-')}
+              </div>
+            </div>
+          </div>
+
+          <div class="controls" style="margin-top:12px;">
+            <button type="button" class="success" data-assign-pair="left" data-a="${a}" data-b="${b}" ${canAssign ? '' : 'disabled'}>왼쪽을 A팀</button>
+            <button type="button" class="secondary" data-assign-pair="right" data-a="${a}" data-b="${b}" ${canAssign ? '' : 'disabled'}>오른쪽을 A팀</button>
             <button type="button" class="danger" data-delete-pair="${idx}">삭제</button>
           </div>
         </div>
       `;
     }).join('');
+
+    if (state.pendingScrollPairKey) {
+      requestAnimationFrame(() => scrollToPairCard(state.pendingScrollPairKey));
+      state.pendingScrollPairKey = null;
+    }
   }
 
   function renderTeams() {
@@ -150,7 +186,7 @@
 
     teamAList.innerHTML = state.teams.a.length ? state.teams.a.map(id => renderTeamItem(id, 'a')).join('') : '<div class="muted small">비어 있음</div>';
     teamBList.innerHTML = state.teams.b.length ? state.teams.b.map(id => renderTeamItem(id, 'b')).join('') : '<div class="muted small">비어 있음</div>';
-    setPickedBox();
+
     saveLocal('teams', state.teams);
     saveLocal('rivals', state.rivals);
   }
@@ -159,13 +195,14 @@
     const item = getStreamer(id);
     const rivalId = rivalFor(id);
     const rival = rivalId ? getStreamer(rivalId) : null;
+    const teamName = team === 'a' ? 'A팀' : 'B팀';
     return `
-      <div class="list-item">
+      <div class="list-item team-item" data-team-item="${id}">
         <strong>${escapeHtml(item?.name || '삭제된 항목')}</strong>
         <div class="small muted" style="margin-top:6px;">
           탱 ${escapeHtml(item?.tank_tier || '-')} · 딜 ${escapeHtml(item?.dps_tier || '-')} · 힐 ${escapeHtml(item?.support_tier || '-')}
         </div>
-        <div class="small muted" style="margin-top:6px;">맞상대: ${rival ? escapeHtml(rival.name) : '미지정'}</div>
+        <div class="small muted" style="margin-top:6px;">현재 팀: ${teamName} · 맞상대: ${rival ? escapeHtml(rival.name) : '미지정'}</div>
         <div class="controls" style="margin-top:10px;">
           <button type="button" class="danger" data-remove-team="${team}" data-id="${id}">제거</button>
         </div>
@@ -173,56 +210,80 @@
     `;
   }
 
-  function canAdd(team) {
-    return state.teams[team].length < state.teams.size;
-  }
-
-  function teamOf(id) {
-    if (state.teams.a.includes(id)) return 'a';
-    if (state.teams.b.includes(id)) return 'b';
-    return null;
-  }
-
-  function addToTeam(team, id, autoSource = null) {
-    const otherTeam = team === 'a' ? 'b' : 'a';
-    if (!id) return;
-    if (teamOf(id)) {
-      setStatus(statusBox, '이미 팀에 들어간 스트리머입니다.', 'error');
+  function addPairToTeams(a, b, orientation) {
+    const leftTeam = teamOf(a);
+    const rightTeam = teamOf(b);
+    if (leftTeam || rightTeam) {
+      setStatus(statusBox, '이미 팀에 배치된 맞상대입니다. 먼저 기존 팀에서 제거해 주세요.', 'error');
       return;
     }
-    if (!canAdd(team)) {
-      setStatus(statusBox, `${team === 'a' ? 'A팀' : 'B팀'} 정원이 가득 찼습니다.`, 'error');
+    if (!canAdd('a') || !canAdd('b')) {
+      setStatus(statusBox, 'A팀 또는 B팀 정원이 가득 찼습니다.', 'error');
       return;
     }
-    state.teams[team].push(id);
 
-    const rivalId = rivalFor(id);
-    if (rivalId && !teamOf(rivalId)) {
-      if (!canAdd(otherTeam)) {
-        setStatus(statusBox, '반대 팀 정원이 가득 차서 맞상대를 자동 배치할 수 없습니다.', 'error');
-      } else {
-        state.teams[otherTeam].push(rivalId);
-        state.teams.autoLinks[id] = rivalId;
-        state.teams.autoLinks[rivalId] = id;
-      }
-    }
+    const aTeamId = orientation === 'left' ? a : b;
+    const bTeamId = orientation === 'left' ? b : a;
 
-    setStatus(statusBox, autoSource ? '자동 맞상대 배치가 적용되었습니다.' : '팀에 추가되었습니다.', 'notice');
+    state.teams.a.push(aTeamId);
+    state.teams.b.push(bTeamId);
+    state.teams.autoLinks[aTeamId] = bTeamId;
+    state.teams.autoLinks[bTeamId] = aTeamId;
+
     renderTeams();
+    renderPairs();
+    setStatus(statusBox, orientation === 'left' ? '왼쪽을 A팀으로 배치했습니다.' : '오른쪽을 A팀으로 배치했습니다.', 'notice');
+  }
+
+  function scrollToPairCard(key) {
+    const card = document.querySelector(`[data-pair-key="${key}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('flash-focus');
+    setTimeout(() => card.classList.remove('flash-focus'), 1500);
   }
 
   function removeFromTeam(team, id) {
-    state.teams[team] = state.teams[team].filter(x => x !== id);
-    const linked = state.teams.autoLinks[id];
-    delete state.teams.autoLinks[id];
+    const rivalId = rivalFor(id);
+    const linked = state.teams.autoLinks[id] || rivalId;
+    const pairA = team === 'a' ? id : linked;
+    const pairB = team === 'a' ? linked : id;
+    if (pairA && pairB) {
+      state.pendingScrollPairKey = pairKey(pairA, pairB);
+    } else if (rivalId) {
+      const pair = state.rivals.find(([a, b]) => a === id || b === id);
+      if (pair) state.pendingScrollPairKey = pairKey(pair[0], pair[1]);
+    }
+
+    state.teams.a = state.teams.a.filter(x => x !== id);
+    state.teams.b = state.teams.b.filter(x => x !== id);
 
     if (linked) {
-      delete state.teams.autoLinks[linked];
       state.teams.a = state.teams.a.filter(x => x !== linked);
       state.teams.b = state.teams.b.filter(x => x !== linked);
+      delete state.teams.autoLinks[linked];
     }
-    setStatus(statusBox, '팀에서 제거되었습니다.', 'notice');
+    delete state.teams.autoLinks[id];
+
     renderTeams();
+    renderPairs();
+    setStatus(statusBox, '팀에서 제거되었습니다. 원래 맞상대 카드로 이동합니다.', 'notice');
+  }
+
+  function removePairAt(idx) {
+    const pair = state.rivals[idx];
+    if (!pair) return;
+    const [a, b] = pair;
+    if (teamOf(a) || teamOf(b)) {
+      state.teams.a = state.teams.a.filter(x => x !== a && x !== b);
+      state.teams.b = state.teams.b.filter(x => x !== a && x !== b);
+      delete state.teams.autoLinks[a];
+      delete state.teams.autoLinks[b];
+    }
+    state.rivals.splice(idx, 1);
+    renderTeams();
+    renderPairs();
+    setStatus(statusBox, '맞상대가 삭제되었습니다.', 'notice');
   }
 
   async function loadStreamers() {
@@ -253,12 +314,6 @@
       state.picks.b = null;
       renderSuggest(rivalBSuggest, searchStreamers(rivalBInput.value, state.picks.a ? [state.picks.a] : []), id => selectRivalSide('b', id));
     });
-
-    teamSearchInput.addEventListener('input', () => {
-      state.pickedStreamerId = null;
-      renderSuggest(teamSuggest, searchStreamers(teamSearchInput.value), id => selectTeamSearch(id));
-      setPickedBox();
-    });
   }
 
   function bindButtons() {
@@ -285,39 +340,44 @@
     });
 
     clearPairsBtn.addEventListener('click', () => {
-      if (!confirm('개인 맞상대 전체를 삭제할까요?')) return;
+      if (!confirm('개인 맞상대 전체를 삭제할까요? 팀 편성도 함께 초기화됩니다.')) return;
       state.rivals = [];
-      state.teams.autoLinks = {};
+      state.teams = { size: state.teams.size, a: [], b: [], autoLinks: {} };
       renderPairs();
       renderTeams();
+      setStatus(statusBox, '개인 맞상대와 팀 편성을 모두 초기화했습니다.', 'notice');
     });
 
     pairList.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-delete-pair]');
-      if (!btn) return;
-      const idx = Number(btn.dataset.deletePair);
-      state.rivals.splice(idx, 1);
-      renderPairs();
-      renderTeams();
-    });
+      const assignBtn = e.target.closest('[data-assign-pair]');
+      if (assignBtn) {
+        addPairToTeams(assignBtn.dataset.a, assignBtn.dataset.b, assignBtn.dataset.assignPair);
+        return;
+      }
 
-    addTeamABtn.addEventListener('click', () => addToTeam('a', state.pickedStreamerId));
-    addTeamBBtn.addEventListener('click', () => addToTeam('b', state.pickedStreamerId));
+      const deleteBtn = e.target.closest('[data-delete-pair]');
+      if (deleteBtn) {
+        removePairAt(Number(deleteBtn.dataset.deletePair));
+      }
+    });
 
     size5Btn.addEventListener('click', () => {
       state.teams = { size: 5, a: [], b: [], autoLinks: {} };
       renderTeams();
+      renderPairs();
     });
 
     size6Btn.addEventListener('click', () => {
       state.teams = { size: 6, a: [], b: [], autoLinks: {} };
       renderTeams();
+      renderPairs();
     });
 
     resetTeamsBtn.addEventListener('click', () => {
       if (!confirm('팀 편성을 초기화할까요?')) return;
       state.teams = { size: state.teams.size, a: [], b: [], autoLinks: {} };
       renderTeams();
+      renderPairs();
     });
 
     teamAList.addEventListener('click', (e) => {

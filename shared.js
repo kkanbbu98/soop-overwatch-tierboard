@@ -1,11 +1,32 @@
-window.TIER_ORDER = ['-','Bronze','Silver','Gold','Platinum','Diamond','Master','Grandmaster','Champion'];
+window.BASE_TIERS = ['Bronze','Silver','Gold','Platinum','Diamond','Master','Grandmaster','Champion'];
+window.TIER_ORDER = (() => {
+  const tiers = ['-'];
+  for (const base of window.BASE_TIERS) {
+    for (let div = 5; div >= 1; div -= 1) {
+      tiers.push(`${base} ${div}`);
+    }
+  }
+  return tiers;
+})();
 window.ROLE_KEYS = [
   { key: 'tank', label: '탱커' },
   { key: 'dps', label: '딜러' },
   { key: 'support', label: '힐러' }
 ];
 
+function baseTierName(tier) {
+  const value = String(tier || '-').trim();
+  if (value === '-') return '-';
+  return value.replace(/\s+[1-5]$/, '');
+}
+
+function tierDivision(tier) {
+  const match = String(tier || '').trim().match(/([1-5])$/);
+  return match ? Number(match[1]) : null;
+}
+
 function slugTier(tier) {
+  const base = baseTierName(tier);
   const map = {
     '-': 'unrated',
     'Bronze': 'bronze',
@@ -17,7 +38,7 @@ function slugTier(tier) {
     'Grandmaster': 'grandmaster',
     'Champion': 'champion'
   };
-  return map[tier] || 'unrated';
+  return map[base] || 'unrated';
 }
 
 function roleBadge(roleLabel, tier) {
