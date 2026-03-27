@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOOP 오버워치 개인 맞상대 / 팀 편성</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="titlebox">
+        <h1>개인 맞상대 / 팀 편성</h1>
+        <p>이 페이지의 맞상대 지정과 팀 편성 결과는 이 브라우저에만 저장됩니다. 공용 데이터는 스트리머 기본 정보만 불러옵니다.</p>
+      </div>
+    </header>
+
+    <nav class="nav">
+      <a href="./index.html">공유 티어보드</a>
+      <a href="./tiers.html">포지션별 티어표</a>
+      <a class="active" href="./matchup.html">개인 맞상대 / 팀 편성</a>
+    </nav>
+
+    <div id="configNotice" class="error hidden"></div>
+    <div id="statusBox" class="hidden"></div>
+
+    <section class="grid2" style="margin-bottom:18px;">
+      <div class="stat panel box">
+        <div class="label">등록된 스트리머</div>
+        <div class="value" id="streamerCount">0</div>
+      </div>
+      <div class="stat panel box">
+        <div class="label">개인 맞상대 페어 수</div>
+        <div class="value" id="pairCount">0</div>
+      </div>
+    </section>
+
+    <div class="row" style="grid-template-columns:1fr;gap:18px;">
+      <section class="panel box">
+        <h2>맞상대 지정</h2>
+        <p class="muted small">드롭다운 대신 검색 + 자동완성으로 지정합니다. 여기서 지정한 맞상대는 본인 브라우저에만 저장됩니다.</p>
+        <div class="pair-grid">
+          <div class="field autocomplete">
+            <label for="rivalAInput">A 스트리머</label>
+            <input id="rivalAInput" autocomplete="off" placeholder="이름 검색" />
+            <div id="rivalASuggest" class="suggest hidden"></div>
+          </div>
+          <div class="field autocomplete">
+            <label for="rivalBInput">B 스트리머</label>
+            <input id="rivalBInput" autocomplete="off" placeholder="이름 검색" />
+            <div id="rivalBSuggest" class="suggest hidden"></div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="savePairBtn">맞상대 저장</button>
+          <button id="clearPairsBtn" class="danger">맞상대 전체 삭제</button>
+        </div>
+
+        <hr class="sep" />
+        <h3>저장된 맞상대</h3>
+        <div id="pairList" class="list"></div>
+      </section>
+
+      <section class="panel box">
+        <div class="toolbar">
+          <h2>팀 편성</h2>
+          <div class="controls">
+            <button class="secondary" id="size5Btn" type="button">5대5</button>
+            <button class="secondary" id="size6Btn" type="button">6대6</button>
+            <button class="danger" id="resetTeamsBtn" type="button">팀 초기화</button>
+          </div>
+        </div>
+
+        <div class="field autocomplete">
+          <label for="teamSearchInput">스트리머 검색</label>
+          <input id="teamSearchInput" autocomplete="off" placeholder="이름 검색 후 A팀/B팀에 추가" />
+          <div id="teamSuggest" class="suggest hidden"></div>
+        </div>
+        <div id="pickedBox" class="notice">선택된 스트리머가 없습니다.</div>
+        <div class="controls" style="margin-top:12px;">
+          <button id="addTeamABtn" class="success" type="button">A팀에 추가</button>
+          <button id="addTeamBBtn" class="secondary" type="button">B팀에 추가</button>
+        </div>
+
+        <hr class="sep" />
+        <div class="team-grid">
+          <div class="team">
+            <h3><span>A팀</span><span id="teamACount">0 / 5</span></h3>
+            <div id="teamAList" class="list"></div>
+          </div>
+          <div class="team">
+            <h3><span>B팀</span><span id="teamBCount">0 / 5</span></h3>
+            <div id="teamBList" class="list"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./shared.js"></script>
+  <script src="./matchup.js"></script>
+</body>
+</html>

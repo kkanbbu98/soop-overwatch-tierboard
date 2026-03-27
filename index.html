@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOOP 오버워치 내전 티어보드</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="titlebox">
+        <h1>SOOP 오버워치 내전 티어보드</h1>
+        <p>공유 데이터는 모두가 같은 정보를 보고, 맞상대/팀 편성은 각자 브라우저에 따로 저장되는 GitHub Pages 배포용 버전입니다.</p>
+      </div>
+      <div class="controls">
+        <button id="authBtn" class="secondary">관리 잠금 해제</button>
+        <button id="logoutBtn" class="ghost hidden">다시 잠그기</button>
+      </div>
+    </header>
+
+    <nav class="nav">
+      <a class="active" href="./index.html">공유 티어보드</a>
+      <a href="./tiers.html">포지션별 티어표</a>
+      <a href="./matchup.html">개인 맞상대 / 팀 편성</a>
+    </nav>
+
+    <div id="configNotice" class="error hidden"></div>
+    <div id="statusBox" class="hidden"></div>
+
+    <section class="grid2" style="margin-bottom:18px;">
+      <div class="stat panel box">
+        <div class="label">전체 스트리머 수</div>
+        <div class="value" id="totalCount">0</div>
+      </div>
+      <div class="stat panel box">
+        <div class="label">검색 결과</div>
+        <div class="value" id="filteredCount">0</div>
+      </div>
+    </section>
+
+    <div class="row main">
+      <aside class="panel box">
+        <h2>등록 / 수정</h2>
+        <p class="muted small">보기는 누구나 가능하고, 등록·수정·삭제는 공용 관리자 비밀번호를 입력한 뒤 사용할 수 있습니다.</p>
+        <form id="streamerForm">
+          <div class="field">
+            <label for="nameInput">스트리머명</label>
+            <input id="nameInput" required maxlength="30" placeholder="예: 스트리머명" />
+          </div>
+          <div class="field">
+            <label for="tankTier">탱커</label>
+            <select id="tankTier"></select>
+          </div>
+          <div class="field">
+            <label for="dpsTier">딜러</label>
+            <select id="dpsTier"></select>
+          </div>
+          <div class="field">
+            <label for="supportTier">힐러</label>
+            <select id="supportTier"></select>
+          </div>
+          <div class="field">
+            <label for="noteInput">비고</label>
+            <textarea id="noteInput" maxlength="500" placeholder="특징, 주의사항 등을 적어 주세요."></textarea>
+          </div>
+          <div class="controls">
+            <button type="submit" id="saveBtn">등록하기</button>
+            <button type="button" class="secondary" id="resetBtn">입력 초기화</button>
+          </div>
+        </form>
+
+        <hr class="sep" />
+
+        <h3>선택된 스트리머</h3>
+        <div id="selectedBox" class="notice">선택된 스트리머가 없습니다.</div>
+        <div class="controls" style="margin-top:12px;">
+          <button type="button" id="editBtn" class="secondary">선택 항목 불러오기</button>
+          <button type="button" id="deleteBtn" class="danger">선택 삭제</button>
+        </div>
+      </aside>
+
+      <main class="panel box">
+        <div class="toolbar">
+          <div class="searchbar">
+            <input id="searchInput" placeholder="스트리머명으로 검색" />
+            <button type="button" class="secondary" id="clearSearchBtn">지우기</button>
+          </div>
+          <div class="controls">
+            <button type="button" class="secondary" id="refreshBtn">새로고침</button>
+          </div>
+        </div>
+
+        <div class="cards" id="cardList"></div>
+
+        <div class="table-wrap" style="margin-top:18px;">
+          <table>
+            <thead>
+              <tr>
+                <th>스트리머</th>
+                <th>탱커</th>
+                <th>딜러</th>
+                <th>힐러</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <p class="footer-note">검색은 스트리머명만 대상으로 동작합니다.</p>
+  </div>
+
+  <div id="authModal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>관리 잠금 해제</h3>
+      <p class="muted small">공용 관리자 비밀번호를 입력하면 이 탭에서만 등록·수정·삭제가 활성화됩니다.</p>
+      <div class="field">
+        <label for="authPassword">관리 비밀번호</label>
+        <div class="searchbar" style="min-width:0;">
+          <input id="authPassword" type="password" placeholder="관리 비밀번호 입력" />
+          <button id="togglePasswordBtn" class="secondary" type="button">보기</button>
+        </div>
+      </div>
+      <div id="authStatus" class="hidden"></div>
+      <div class="controls">
+        <button id="authSubmitBtn">잠금 해제</button>
+        <button id="authCloseBtn" class="secondary" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./shared.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

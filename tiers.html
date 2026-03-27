@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOOP 오버워치 포지션별 티어표</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="titlebox">
+        <h1>포지션별 전체 티어표</h1>
+        <p>탱커 / 딜러 / 힐러를 각 티어 구간으로 나눠서 한눈에 확인하는 페이지입니다.</p>
+      </div>
+    </header>
+
+    <nav class="nav">
+      <a href="./index.html">공유 티어보드</a>
+      <a class="active" href="./tiers.html">포지션별 티어표</a>
+      <a href="./matchup.html">개인 맞상대 / 팀 편성</a>
+    </nav>
+
+    <div id="configNotice" class="error hidden"></div>
+    <div id="statusBox" class="hidden"></div>
+
+    <section class="panel box">
+      <div class="tabs" id="roleTabs"></div>
+      <div class="toolbar">
+        <div class="searchbar">
+          <input id="searchInput" placeholder="스트리머명으로 검색" />
+          <button type="button" class="secondary" id="clearSearchBtn">지우기</button>
+        </div>
+      </div>
+      <div id="tierBoard" class="tier-board"></div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./shared.js"></script>
+  <script src="./tiers.js"></script>
+</body>
+</html>
